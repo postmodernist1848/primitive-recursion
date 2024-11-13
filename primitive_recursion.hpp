@@ -6,13 +6,15 @@
 #include <cstddef>
 #include <utility>
 
-typedef std::size_t Int;
+typedef std::size_t Nat;
+
+namespace primitive_recursion_detail {
 
 template <typename T>
-concept Ints = std::same_as<Int, T>;
+concept Nats = std::same_as<Nat, T>;
 
-template <Int K, Ints... Args>
-constexpr Int kth_arg(Int arg, Args... args) {
+template <Nat K, Nats... Args>
+constexpr Nat kth_arg(Nat arg, Args... args) {
     if constexpr (K == 1) {
         return arg;
     } else {
@@ -20,99 +22,89 @@ constexpr Int kth_arg(Int arg, Args... args) {
     }
 }
 
-template <typename F>
-struct Nargs;
+template <Nat> using alwaysNat = Nat;
 
-template <Ints... Args>
-struct Nargs<Int (Args...)> {
-    inline static constexpr Int value = sizeof...(Args);
-};
+template <Nat K, typename Seq>
+struct U;
 
-template <Int> using alwaysInt = Int;
+template <Nat K, Nat... Is>
+struct U<K, std::index_sequence<Is...>> {
 
-template <Int K, typename Seq>
-struct U_impl;
+    constexpr U(alwaysNat<Is>... args) : n(this->operator()(args...)) {}
 
-template <Int K, Int... Is>
-struct U_impl<K, std::index_sequence<Is...>> {
+    constexpr operator Nat() { return n; }
 
-    constexpr U_impl(alwaysInt<Is>... args) : n(this->operator()(args...)) {}
-
-    constexpr operator Int() { return n; }
-
-    static constexpr Int operator()(alwaysInt<Is>... args) {
+    static constexpr Nat operator()(alwaysNat<Is>... args) {
         return kth_arg<K>(args...);
     }
-
-    Int n;
+private:
+    Nat n;
 };
 
-template <typename G, typename Ff, typename... Fs> struct S_impl;
-
+template <typename G, typename Signature, typename... Fs> struct S;
 template <typename G, typename... Args, typename... Fs> 
-struct S_impl<G, Int(Args...), Fs...> {
+struct S<G, Nat(Args...), Fs...> {
 
-    constexpr S_impl(Args... args) : n(this->operator()(args...)) {}
-    constexpr operator Int() { return n; }
+    constexpr S(Args... args) : n(this->operator()(args...)) {}
+    constexpr operator Nat() { return n; }
 
-    static constexpr Int operator()(Args... args) {
+    static constexpr Nat operator()(Args... args) {
         return G::operator()(Fs::operator()(args...)...);
     }
 
-    Int n;
+private:
+    Nat n;
 };
 
-struct Z {
-    constexpr Z(Int) {}
-    constexpr operator Int() { return 0; };
+template <typename Signature, typename F, typename G> struct R;
+template <typename... Args, typename F, typename G> 
+struct R<Nat (Args...), F, G> {
+    constexpr R(Args... x, Nat y) : n(this->operator()(x..., y)) {}
+    constexpr operator Nat() { return n; }
 
-    static constexpr Int operator()(Int) {
+    static constexpr Nat operator()(Args... x, Nat y) {
+        if (y == 0) {
+            return F::operator()(x...);
+        } else {
+            return G::operator()(x..., y - 1, R<decltype(F::operator()), F, G>::operator()(x..., y - 1));
+        }
+    }
+
+private:
+    Nat n;
+};
+
+} // namespace primitive_recursion_detail
+
+struct Z {
+    constexpr Z(Nat) {}
+    constexpr operator Nat() { return 0; };
+
+    static constexpr Nat operator()(Nat) {
         return 0;
     }
 };
 
 struct N {
-    constexpr N(Int n) : n(this->operator()(n)) {}
-    constexpr operator Int() { return n; };
+    constexpr N(Nat n) : n(this->operator()(n)) {}
+    constexpr operator Nat() { return n; };
 
-    static constexpr Int operator()(Int n) {
+    static constexpr Nat operator()(Nat n) {
         return n + 1;
     }
 
 private:
-    Int n;
+    Nat n;
 };
 
-template <Int K, Int N>
-using U = U_impl<K, std::make_index_sequence<N>>;
-
+template <Nat K, Nat N>
+using U = primitive_recursion_detail::U<K, std::make_index_sequence<N>>;
 
 template <typename G, typename F, typename... Fs>
-using S = S_impl<G, decltype(F::operator()), F, Fs...>;
-
-
-
-template <typename Signature, typename F, typename G> struct R_impl;
-
-
-template <typename... Args, typename F, typename G> 
-struct R_impl<Int (Args...), F, G> {
-    constexpr R_impl(Args... x, Int y) : n(this->operator()(x..., y)) {}
-    constexpr operator Int() { return n; }
-
-    static constexpr Int operator()(Args... x, Int y) {
-        if (y == 0) {
-            return F::operator()(x...);
-        } else {
-            return G::operator()(x..., y - 1, R_impl<decltype(F::operator()), F, G>::operator()(x..., y - 1));
-        }
-    }
-
-    Int n;
-};
+using S = primitive_recursion_detail::S<G, decltype(F::operator()), F, Fs...>;
 
 template <typename F, typename G>
-using R = R_impl<decltype(F::operator()), F, G>;
+using R = primitive_recursion_detail::R<decltype(F::operator()), F, G>;
 
 static_assert(Z(0) == 0);
 static_assert(Z(1) == 0);
@@ -128,4 +120,6 @@ static_assert(Sum(34, 35) == 69);
 
 using Sum13 = S<Sum, U<1, 3>, U<3, 3>>;
 using Mul = R<Z, Sum13>;
-static_assert(Mul(21, 23) == 483);
+static_assert(Mul(7, 11) == 77);
+static_assert(Mul(12, 14) == 168);
+
