@@ -1,7 +1,5 @@
 #pragma once
 
-#include <algorithm>
-#include <array>
 #include <concepts>
 #include <cstddef>
 #include <utility>
@@ -123,3 +121,54 @@ using Mul = R<Z, Sum13>;
 static_assert(Mul(7, 11) == 77);
 static_assert(Mul(12, 14) == 168);
 
+
+using Sub1 = S<R<Z, U<2, 3>>, U<1, 1>, U<1, 1>>; // using y - 1 here
+static_assert(Sub1(0) == 0);
+static_assert(Sub1(1) == 0);
+static_assert(Sub1(4) == 3);
+
+using Sub = R<U<1, 1>, S<Sub1, U<3, 3>>>;
+static_assert(Sub(0, 2) == 0);
+static_assert(Sub(3, 3) == 0);
+static_assert(Sub(7, 3) == 4);
+
+// if c != 0 then x else y
+using If = S<R<U<2, 2>, U<1, 4>>, U<2, 3> /*x*/, U<3, 3> /*y*/, U<1, 3>/*c*/>;
+static_assert(If(0, 1, 2) == 2);
+static_assert(If(3, 1, 2) == 1);
+static_assert(If(1, 1, 2) == 1);
+
+using ToBool = S<If, U<1, 1>, S<N, Z>, Z>;
+static_assert(ToBool(0) == 0);
+static_assert(ToBool(1) == 1);
+static_assert(ToBool(2) == 1);
+
+using LT = S<If, S<Sub, U<2,2>, U<1, 2>>, S<S<N, Z>, U<1, 2>>, S<Z, U<1, 2>>>;
+static_assert(LT(1, 2) == 1);
+static_assert(LT(1, 1) == 0);
+static_assert(LT(2, 1) == 0);
+static_assert(LT(4, 1) == 0);
+
+using Rem_g = S<If, S<LT, S<N, U<3, 3>>, U<1, 3>>, S<N, U<3, 3>>, S<Z, U<1, 3>>>; // rem(a, m + 1) = if (rem(a, m) + 1 < a) rem(a, m) + 1 else 0.
+using Rem = R<Z, Rem_g>;
+
+// Rem(a, b) = b % a
+static_assert(Rem(1, 0) == 0);
+static_assert(Rem(1, 3) == 0);
+static_assert(Rem(3, 0) == 0);
+static_assert(Rem(3, 6) == 0);
+static_assert(Rem(3, 5) == 2);
+static_assert(Rem(3, 17) == 2);
+static_assert(Rem(5, 17) == 2);
+static_assert(Rem(5, 14) == 4);
+static_assert(Rem(17, 29) == 12);
+
+using Div_g = S<If, S<Rem, U<1, 3>, S<N, U<2, 3>>>, U<3, 3>, S<N, U<3, 3>>>; // div(a, m + 1) = if (0 < rem(a, m + 1)) div(a, m) else div(a, m) + 1.
+using Div = R<Z, Div_g>;
+
+// Div(a, b) = b % a
+static_assert(Div(2, 0) == 0);
+static_assert(Div(1, 3) == 3);
+static_assert(Div(2, 3) == 1);
+static_assert(Div(7, 14) == 2);
+static_assert(Div(7, 17) == 2);
