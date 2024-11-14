@@ -55,7 +55,7 @@ private:
 };
 
 template <typename Signature, typename F, typename G> struct R;
-template <typename... Args, typename F, typename G> 
+template <Nats... Args, typename F, typename G> 
 struct R<Nat (Args...), F, G> {
     constexpr R(Args... x, Nat y) : n(this->operator()(x..., y)) {}
     constexpr operator Nat() { return n; }
@@ -167,4 +167,69 @@ static_assert(Div(2, 3) == 1);
 static_assert(Div(7, 14) == 2);
 static_assert(Div(7, 17) == 2);
 
+using LE = S<If, S<Sub, U<1, 2>, U<2,2>>, S<Z, U<1, 2>>, S<S<N, Z>, U<1, 2>>>;
+static_assert(LE(1, 2) == 1);
+static_assert(LE(1, 1) == 1);
+static_assert(LE(2, 1) == 0);
+static_assert(LE(4, 1) == 0);
+
+using Eq = S<Mul, LE, S<LE, U<2, 2>, U<1, 2>>>;
+static_assert(Eq(1, 2) == 0);
+static_assert(Eq(3, 2) == 0);
+static_assert(Eq(0, 2) == 0);
+static_assert(Eq(2, 2) == 1);
+static_assert(Eq(0, 0) == 1);
+
+// min<P>(y, x) = min z <= x such that P(z, y) (x if none)
+// g(y, x - 1, Min(y, x - 1));
+
+template <typename P>
+using Min = R<Z, 
+      S<Sum, 
+        U<3, 3>, 
+        S<Mul, S<Eq, U<3, 3>, U<2, 3>>, S<Eq, S<P, U<2, 3>, U<1, 3>>, S<Z, U<1, 3>> > >
+        // minz≤x+1(f (z, ~y) = 0) = minz≤x(f (z, ~y) = 0) + [minz≤x(f (z, ~y) = 0) = x ∧ f (x, ~y) > 0];
+>>;
+static_assert(Min<Eq>(3, 3) == 3);
+static_assert(Min<Eq>(2, 3) == 2);
+static_assert(Min<Eq>(2, 3) == 2);
+static_assert(Min<Eq>(10, 2) == 2);
+
+using GT = S<LT, U<2, 2>, U<1, 2>>;
+using GE = S<LE, U<2, 2>, U<1, 2>>;
+static_assert(Min<GT>(2, 5) == 3);
+static_assert(Min<GE>(3, 5) == 3);
+
+using Conj = S<If, U<1, 2>, S<N, S<Z, U<1, 2>>>, U<2, 2>>;
+static_assert(Conj(1, 1) == 1);
+static_assert(Conj(1, 0) == 1);
+static_assert(Conj(0, 1) == 1);
+static_assert(Conj(0, 0) == 0);
+
+// Forall<P>(y, x) - forall z < x P(z, y)
+
+template <typename P>
+using Forall = R< 
+    S<N, Z>, 
+    S<Mul, S<P, U<2, 3>, U<1, 3>>, U<3, 3>>
+>;
+
+static_assert(Forall<LT>(4, 4) == 1);
+static_assert(Forall<GT>(1, 4) == 0);
+static_assert(Forall<GE>(0, 4) == 1);
+
+// Prime_cond(z, x) := z > 0 && (z = 1 ∨ ¬(z|x))
+using Prime_cond = S<Conj, 
+      S<LE, U<1, 2>, S<N, S<Z, U<1, 2>>>> /*z <= 1*/, 
+      S<GT, Rem, S<Z, U<1, 2>>> /*z % x > 0*/ 
+>;
+
+
+using Prime = S<Mul, S<LT, S<N, Z>, U<1, 1>> /*1 < x*/, S< Forall<Prime_cond>, U<1, 1>, U<1, 1>> /*forall z < x ...*/ >;
+static_assert(Prime(1) == 0);
+static_assert(Prime(3) == 1);
+static_assert(Prime(4) == 0);
+static_assert(Prime(5) == 1);
+static_assert(Prime(9) == 0);
+static_assert(Prime(11) == 1);
 
