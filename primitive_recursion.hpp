@@ -61,6 +61,7 @@ struct R<Nat (Args...), F, G> {
     constexpr operator Nat() { return n; }
 
     static constexpr Nat operator()(Args... x, Nat y) {
+
         if (y == 0) {
             return F::operator()(x...);
         } else {
@@ -180,6 +181,9 @@ static_assert(Eq(0, 2) == 0);
 static_assert(Eq(2, 2) == 1);
 static_assert(Eq(0, 0) == 1);
 
+using GT = S<LT, U<2, 2>, U<1, 2>>;
+using GE = S<LE, U<2, 2>, U<1, 2>>;
+
 // min<P>(y, x) = min z <= x such that P(z, y) (x if none)
 // g(y, x - 1, Min(y, x - 1));
 
@@ -187,18 +191,15 @@ template <typename P>
 using Min = R<Z, 
       S<Sum, 
         U<3, 3>, 
-        S<Mul, S<Eq, U<3, 3>, U<2, 3>>, S<Eq, S<P, U<2, 3>, U<1, 3>>, S<Z, U<1, 3>> > >
-        // minz≤x+1(f (z, ~y) = 0) = minz≤x(f (z, ~y) = 0) + [minz≤x(f (z, ~y) = 0) = x ∧ f (x, ~y) > 0];
+        S<Mul, S<Eq, U<3, 3>, U<2, 3>> /*... = x*/, S<Eq, S<P, U<2, 3>, U<1, 3>> /*P(x, ~y)*/, S<Z, U<1, 3>> > >
+        // minz≤x+1(P (z, ~y) = 0) = minz≤x(P (z, ~y)) + [minz≤x(P (z, ~y)) = x ∧ P (x, ~y) = 0];
 >>;
 static_assert(Min<Eq>(3, 3) == 3);
 static_assert(Min<Eq>(2, 3) == 2);
-static_assert(Min<Eq>(2, 3) == 2);
 static_assert(Min<Eq>(10, 2) == 2);
-
-using GT = S<LT, U<2, 2>, U<1, 2>>;
-using GE = S<LE, U<2, 2>, U<1, 2>>;
 static_assert(Min<GT>(2, 5) == 3);
 static_assert(Min<GE>(3, 5) == 3);
+static_assert(Min<GE>(10, 20) == 10);
 
 using Conj = S<If, U<1, 2>, S<N, S<Z, U<1, 2>>>, U<2, 2>>;
 static_assert(Conj(1, 1) == 1);
@@ -224,6 +225,11 @@ using Prime_cond = S<Conj,
       S<GT, Rem, S<Z, U<1, 2>>> /*z % x > 0*/ 
 >;
 
+using Two = S<N, S<N, Z>>;
+using Mul13 = S<Mul, U<1, 3>, U<3, 3>>;
+using Pow = R<S<N, Z>, Mul13>;
+static_assert(Pow(2, 4) == 16);
+using Pow2 = S<Pow, Two, U<1, 1>>;
 
 using Prime = S<Mul, S<LT, S<N, Z>, U<1, 1>> /*1 < x*/, S< Forall<Prime_cond>, U<1, 1>, U<1, 1>> /*forall z < x ...*/ >;
 static_assert(Prime(1) == 0);
@@ -232,4 +238,30 @@ static_assert(Prime(4) == 0);
 static_assert(Prime(5) == 1);
 static_assert(Prime(9) == 0);
 static_assert(Prime(11) == 1);
+static_assert(Prime(12) == 0);
+static_assert(Prime(13) == 1);
+
+using P = S<Mul, S<Prime, U<1, 2>>, S<LT, U<2, 2>, U<1, 2>>>; /* Prime(z) ∧ x < z */
+using PrimeAfter = S<Min<P>, U<1, 1>, S<N, Pow2>>;
+
+static_assert(Min<P>(3, 10) == 5);
+static_assert(PrimeAfter(1) == 2);
+static_assert(PrimeAfter(2) == 3);
+static_assert(PrimeAfter(4) == 5);
+//static_assert(PrimeAfter(5) == 7);
+//static_assert(PrimeAfter(6) == 7);
+//static_assert(PrimeAfter(7) == 11);
+
+using NthPrime_g = S<PrimeAfter, U<3, 3>>;
+using NthPrime = S<R<Two, NthPrime_g>, Z, U<1, 1>>;
+
+static_assert(NthPrime(0) == 2);
+static_assert(NthPrime(1) == 3);
+static_assert(NthPrime(2) == 5);
+//static_assert(NthPrime(3) == 7);
+
+// lh(x) = minz≤x¬(p(z)|x)
+using NotDivisible = S<GT, Rem, S<Z, U<1, 2>>>; /*z % x > 0*/
+using LenP = S<NotDivisible, S<NthPrime, U<1, 2>>, U<2, 2>>;
+using Len = S<Min<LenP>, U<1, 1>, U<1, 1>>;
 
