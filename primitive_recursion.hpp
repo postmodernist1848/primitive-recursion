@@ -121,7 +121,6 @@ using Mul = R<Z, Sum13>;
 static_assert(Mul(7, 11) == 77);
 static_assert(Mul(12, 14) == 168);
 
-
 using Sub1 = S<R<Z, U<2, 3>>, U<1, 1>, U<1, 1>>; // using y - 1 here
 static_assert(Sub1(0) == 0);
 static_assert(Sub1(1) == 0);
@@ -137,11 +136,6 @@ using If = S<R<U<2, 2>, U<1, 4>>, U<2, 3> /*x*/, U<3, 3> /*y*/, U<1, 3>/*c*/>;
 static_assert(If(0, 1, 2) == 2);
 static_assert(If(3, 1, 2) == 1);
 static_assert(If(1, 1, 2) == 1);
-
-using ToBool = S<If, U<1, 1>, S<N, Z>, Z>;
-static_assert(ToBool(0) == 0);
-static_assert(ToBool(1) == 1);
-static_assert(ToBool(2) == 1);
 
 using LT = S<If, S<Sub, U<2,2>, U<1, 2>>, S<S<N, Z>, U<1, 2>>, S<Z, U<1, 2>>>;
 static_assert(LT(1, 2) == 1);
@@ -172,3 +166,5 @@ static_assert(Div(1, 3) == 3);
 static_assert(Div(2, 3) == 1);
 static_assert(Div(7, 14) == 2);
 static_assert(Div(7, 17) == 2);
+
+
